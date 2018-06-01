@@ -58,7 +58,7 @@ class LFold:
     else:
       return [(indices, indices)]
 
-
+from numpy.core.umath_tests import inner1d
 def calculate_roc(thresholds, embeddings1, embeddings2, actual_issame, nrof_folds=10, pca = 0):
     assert(embeddings1.shape[0] == embeddings2.shape[0])
     assert(embeddings1.shape[1] == embeddings2.shape[1])
@@ -73,12 +73,13 @@ def calculate_roc(thresholds, embeddings1, embeddings2, actual_issame, nrof_fold
     #print('pca', pca)
     
     if pca==0:
-      diff = np.subtract(embeddings1, embeddings2)
-      dist = np.sum(np.square(diff),1)
+      # diff = np.subtract(embeddings1, embeddings2)
+      # dist = np.sum(np.square(diff),1)
+      dist = inner1d(embeddings1, embeddings2) * 0.5 + 0.5
     
     for fold_idx, (train_set, test_set) in enumerate(k_fold.split(indices)):
-        #print('train_set', train_set)
-        #print('test_set', test_set)
+        # print('train_set', train_set)
+        # print('test_set', test_set)
         if pca>0:
           print('doing pca on', fold_idx)
           embed1_train = embeddings1[train_set]
@@ -92,8 +93,9 @@ def calculate_roc(thresholds, embeddings1, embeddings2, actual_issame, nrof_fold
           embed1 = sklearn.preprocessing.normalize(embed1)
           embed2 = sklearn.preprocessing.normalize(embed2)
           #print(embed1.shape, embed2.shape)
-          diff = np.subtract(embed1, embed2)
-          dist = np.sum(np.square(diff),1)
+          # diff = np.subtract(embed1, embed2)
+          # dist = np.sum(np.square(diff),1)
+          dist = inner1d(embed1, embed2) * 0.5 + 0.5
         
         # Find the best threshold for the fold
         acc_train = np.zeros((nrof_thresholds))
@@ -104,13 +106,19 @@ def calculate_roc(thresholds, embeddings1, embeddings2, actual_issame, nrof_fold
         for threshold_idx, threshold in enumerate(thresholds):
             tprs[fold_idx,threshold_idx], fprs[fold_idx,threshold_idx], _ = calculate_accuracy(threshold, dist[test_set], actual_issame[test_set])
         _, _, accuracy[fold_idx] = calculate_accuracy(thresholds[best_threshold_index], dist[test_set], actual_issame[test_set])
+
+    acc_all = np.zeros((nrof_thresholds))
+    for threshold_idx, threshold in enumerate(thresholds):
+        _, _, acc_all[threshold_idx] = calculate_accuracy(threshold, dist, actual_issame)
+    best_threshold_index = np.argmax(acc_all)
+    best_all = (thresholds[best_threshold_index], acc_all[best_threshold_index])
           
     tpr = np.mean(tprs,0)
     fpr = np.mean(fprs,0)
-    return tpr, fpr, accuracy
+    return tpr, fpr, accuracy, best_all
 
 def calculate_accuracy(threshold, dist, actual_issame):
-    predict_issame = np.less(dist, threshold)
+    predict_issame = np.greater(dist, threshold)
     tp = np.sum(np.logical_and(predict_issame, actual_issame))
     fp = np.sum(np.logical_and(predict_issame, np.logical_not(actual_issame)))
     tn = np.sum(np.logical_and(np.logical_not(predict_issame), np.logical_not(actual_issame)))
@@ -120,8 +128,6 @@ def calculate_accuracy(threshold, dist, actual_issame):
     fpr = 0 if (fp+tn==0) else float(fp) / float(fp+tn)
     acc = float(tp+tn)/dist.size
     return tpr, fpr, acc
-
-
   
 def calculate_val(thresholds, embeddings1, embeddings2, actual_issame, far_target, nrof_folds=10):
     assert(embeddings1.shape[0] == embeddings2.shape[0])
@@ -171,15 +177,15 @@ def calculate_val_far(threshold, dist, actual_issame):
 
 def evaluate(embeddings, actual_issame, nrof_folds=10, pca = 0):
     # Calculate evaluation metrics
-    thresholds = np.arange(0, 4, 0.01)
+    thresholds = np.arange(0, 1, 0.01)
     embeddings1 = embeddings[0::2]
     embeddings2 = embeddings[1::2]
-    tpr, fpr, accuracy = calculate_roc(thresholds, embeddings1, embeddings2,
+    tpr, fpr, accuracy, best_all = calculate_roc(thresholds, embeddings1, embeddings2,
         np.asarray(actual_issame), nrof_folds=nrof_folds, pca = pca)
     thresholds = np.arange(0, 4, 0.001)
     val, val_std, far = calculate_val(thresholds, embeddings1, embeddings2,
         np.asarray(actual_issame), 1e-3, nrof_folds=nrof_folds)
-    return tpr, fpr, accuracy, val, val_std, far
+    return tpr, fpr, accuracy, val, val_std, far, best_all
 
 def load_bin(path, image_size):
   bins, issame_list = pickle.load(open(path, 'rb'))
@@ -263,8 +269,8 @@ def test(data_set, mx_model, batch_size, nfolds=10, data_extra = None, label_sha
       _xnorm_cnt+=1
   _xnorm /= _xnorm_cnt
 
-  embeddings = embeddings_list[0].copy()
-  embeddings = sklearn.preprocessing.normalize(embeddings)
+  # embeddings = embeddings_list[0].copy()
+  # embeddings = sklearn.preprocessing.normalize(embeddings)
   acc1 = 0.0
   std1 = 0.0
   #_, _, accuracy, val, val_std, far = evaluate(embeddings, issame_list, nrof_folds=10)
@@ -276,9 +282,9 @@ def test(data_set, mx_model, batch_size, nfolds=10, data_extra = None, label_sha
   embeddings = sklearn.preprocessing.normalize(embeddings)
   print(embeddings.shape)
   print('infer time', time_consumed)
-  _, _, accuracy, val, val_std, far = evaluate(embeddings, issame_list, nrof_folds=nfolds)
+  _, _, accuracy, val, val_std, far, best_all = evaluate(embeddings, issame_list, nrof_folds=nfolds)
   acc2, std2 = np.mean(accuracy), np.std(accuracy)
-  return acc1, std1, acc2, std2, _xnorm, embeddings_list
+  return acc1, std1, acc2, std2, _xnorm, embeddings_list, best_all
 
 def test_badcase(data_set, mx_model, batch_size, name='', data_extra = None, label_shape = None):
   print('testing verification badcase..')
@@ -572,10 +578,11 @@ if __name__ == '__main__':
     for i in xrange(len(ver_list)):
       results = []
       for model in nets:
-        acc1, std1, acc2, std2, xnorm, embeddings_list = test(ver_list[i], model, args.batch_size, args.nfolds)
+        acc1, std1, acc2, std2, xnorm, embeddings_list, best_all = test(ver_list[i], model, args.batch_size, args.nfolds)
         print('[%s]XNorm: %f' % (ver_name_list[i], xnorm))
-        print('[%s]Accuracy: %1.5f+-%1.5f' % (ver_name_list[i], acc1, std1))
+        # print('[%s]Accuracy: %1.5f+-%1.5f' % (ver_name_list[i], acc1, std1))
         print('[%s]Accuracy-Flip: %1.5f+-%1.5f' % (ver_name_list[i], acc2, std2))
+        print('[%s]Best-Threshold: %1.2f  %1.5f' % (ver_name_list[i], best_all[0], best_all[1]))
         results.append(acc2)
       print('Max of [%s] is %1.5f' % (ver_name_list[i], np.max(results)))
   elif args.mode==1:

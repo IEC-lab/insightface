@@ -24,7 +24,6 @@ from sklearn.preprocessing import normalize
 import mxnet as mx
 from mxnet import ndarray as nd
 
-
 feature_dim = 512
 feature_ext = 1
 
@@ -50,6 +49,8 @@ def write_bin(path, feature):
     f.write(struct.pack("%df"%len(feature), *feature))
 
 def main(args):
+  global feature_dim
+  feature_dim = args.feature_dim
 
   out_algo = args.suffix
   if len(args.algo)>0:
@@ -167,6 +168,7 @@ def parse_arguments(argv):
   #parser.add_argument('--facescrub-feature-dir-out', type=str, help='', default='/raid5data/dplearn/megaface/FaceScrub_Features_cm')
   parser.add_argument('--megaface-feature-dir-out', type=str, help='', default='/opt/jiaguo/MegaFace_Features_cm')
   parser.add_argument('--facescrub-feature-dir-out', type=str, help='', default='/opt/jiaguo/FaceScrub_Features_cm')
+  parser.add_argument('--feature_dim', type=int, help='feature length', default=512)
   return parser.parse_args(argv)
 
 if __name__ == '__main__':

@@ -99,3 +99,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+src/megaface/aligned
+src/megaface/devkit
+models/
+src/tensorflow

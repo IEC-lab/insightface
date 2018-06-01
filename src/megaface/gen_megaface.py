@@ -27,9 +27,9 @@ import mxnet as mx
 from mxnet import ndarray as nd
 #from caffe.proto import caffe_pb2
 
-megaface_out = '/raid5data/dplearn/megaface/MegaFace_Features'
+# megaface_out = '/raid5data/dplearn/megaface/MegaFace_Features'
 #facescrub_out = '/raid5data/dplearn/megaface/FaceScrubSubset_Features'
-facescrub_out = '/raid5data/dplearn/megaface/FaceScrub_Features'
+# facescrub_out = '/raid5data/dplearn/megaface/FaceScrub_Features'
 
 
 def do_flip(data):
@@ -101,8 +101,10 @@ def write_bin(path, feature):
 def main(args):
 
   print(args)
-  gpuid = args.gpu
-  ctx = mx.gpu(gpuid)
+  if args.gpus == '':
+    ctx = mx.cpu()
+  else:
+    ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
   nets = []
   image_shape = [int(x) for x in args.image_size.split(',')]
   for model in args.model.split('|'):
@@ -128,11 +130,11 @@ def main(args):
     nets.append(net)
 
   #megaface_lst = "/raid5data/dplearn/faceinsight_align_megaface.lst"
-  megaface_lst = "/raid5data/dplearn/megaface/megaface_mtcnn_112x112/lst"
+  megaface_lst = args.megaface_lst
   #facescrub_lst = "/raid5data/dplearn/faceinsight_align_facescrub.lst"
-  facescrub_lst = "/raid5data/dplearn/megaface/facescrubr/small_lst"
+  facescrub_lst = args.facescrub_lst.replace('lst', 'small_lst')
   if args.fsall>0:
-    facescrub_lst = "/raid5data/dplearn/megaface/facescrubr/lst"
+    facescrub_lst = args.facescrub_lst
 
   if args.skip==0:
     i = 0
@@ -146,7 +148,7 @@ def main(args):
       a,b = _path[-2], _path[-1]
       #a = a.replace(' ', '_')
       #b = b.replace(' ', '_')
-      out_dir = os.path.join(facescrub_out, a)
+      out_dir = os.path.join(args.facescrub_out, a)
       if not os.path.exists(out_dir):
         os.makedirs(out_dir)
       #file, ext = os.path.splitext(b)
@@ -195,7 +197,7 @@ def main(args):
     assert aligned==True
     _path = image_path.split('/')
     a1, a2, b = _path[-3], _path[-2], _path[-1]
-    out_dir = os.path.join(megaface_out, a1, a2)
+    out_dir = os.path.join(args.megaface_out, a1, a2)
     if not os.path.exists(out_dir):
       os.makedirs(out_dir)
       #continue
@@ -215,7 +217,7 @@ def parse_arguments(argv):
   
   parser.add_argument('--batch_size', type=int, help='', default=100)
   parser.add_argument('--image_size', type=str, help='', default='3,112,112')
-  parser.add_argument('--gpu', type=int, help='', default=0)
+  parser.add_argument('--gpus', type=str, help='', default='')
   parser.add_argument('--mean', type=int, help='', default=0)
   parser.add_argument('--seed', type=int, help='', default=727)
   parser.add_argument('--skip', type=int, help='', default=0)
@@ -229,6 +231,10 @@ def parse_arguments(argv):
   #parser.add_argument('--model', type=str, help='', default='../model/spherefacei-s60-p0_0_96_112_0,135')
   #parser.add_argument('--model', type=str, help='', default='../model/spherefacei-s60-p0_0_96_95_0,95')
   parser.add_argument('--model', type=str, help='', default='../model/spherefacei-s60-p0_15_96_112_0,95')
+  parser.add_argument('--megaface_lst', type=str, help='image list for aligned megaface', default='aligned/megaface/lst')
+  parser.add_argument('--megaface_out', type=str, help='output features for aligned megaface', default='aligned/megaface_features')
+  parser.add_argument('--facescrub_lst', type=str, help='image list for aligned facescrub', default='aligned/facescrub/lst')
+  parser.add_argument('--facescrub_out', type=str, help='output features for aligned facescrub', default='aligned/facescrub_features')
   return parser.parse_args(argv)
 
 if __name__ == '__main__':

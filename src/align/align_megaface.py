@@ -150,7 +150,7 @@ def main(args):
                     tform.estimate(dst, src)
                     M = tform.params[0:2,:]
                     warped = cv2.warpAffine(warped0,M,(image_size[1],image_size[0]), borderValue = 0.0)
-                    nrof[0]+=1
+                    nrof[0]+=1   # ! tight bbox
                 #assert fimage.bbox is not None
                 if warped is None and fimage.bbox is not None:
                   _minsize = img.shape[0]//4
@@ -173,7 +173,7 @@ def main(args):
                       tform.estimate(dst, src)
                       M = tform.params[0:2,:]
                       warped = cv2.warpAffine(img,M,(image_size[1],image_size[0]), borderValue = 0.0)
-                      nrof[1]+=1
+                      nrof[1]+=1   # ! small loose bbox
                       #print('1',target_file,index2[0])
                 if warped is None and fimage.bbox is not None:
                   bb = fimage.bbox
@@ -187,7 +187,7 @@ def main(args):
                     tform.estimate(dst, src)
                     M = tform.params[0:2,:]
                     warped = cv2.warpAffine(img,M,(image_size[1],image_size[0]), borderValue = 0.0)
-                    nrof[2]+=1
+                    nrof[2]+=1     # adjust label bbox
                     #print('2',target_file)
 
                 if warped is None:
@@ -210,9 +210,9 @@ def main(args):
                     xw = x+_w
                     xw = min(xw, img.shape[1])
                     roi = np.array( (x, y, xw, y+h), dtype=np.int32)
-                    nrof[3]+=1
+                    nrof[3]+=1 # label bbox
                   else:
-                    nrof[4]+=1
+                    nrof[4]+=1 # tight inside bbox
                   #print('3',bb,roi,img.shape)
                   #print('3',target_file)
                   warped = img[roi[1]:roi[3],roi[0]:roi[2],:]

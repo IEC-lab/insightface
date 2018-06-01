@@ -147,13 +147,27 @@ def main(args):
             #print(image_path)
             filename = os.path.splitext(os.path.split(image_path)[1])[0]
             _paths = fimage.image_path.split('/')
-            print(fimage.image_path)
+            # print(fimage.image_path)
             a,b = _paths[-2], _paths[-1]
             pb = b.rfind('.')
             bname = b[0:pb]
             pb = bname.rfind('_')
             body = bname[(pb+1):]
             img_id = int(body)
+            # try:
+            #     img_id = int(body)
+            # except ValueError as e:
+            #     bname = b
+            #     pb = bname.rfind('_')
+            #     body = bname[(pb+1):]
+            #     img_id = int(body)
+                # print('image_path: %s' % image_path)
+                # print('a: %s' % a)
+                # print('b: %s' % b)
+                # print('pb: %s' % pb)
+                # print('bname: %s' % bname)
+                # print('body: %s' % body)
+                # exit(-1)
             key = (a, img_id)
             if not key in valid_key:
               continue
