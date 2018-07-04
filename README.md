@@ -9,6 +9,12 @@ The code of InsightFace is released under the MIT License.
 
 ## Recent Update
 
+**`2018.06.14`**: There's a large scale Asian training dataset provided by Glint, see this [discussion](https://github.com/deepinsight/insightface/issues/256) for detail.
+
+**`2018.05.16`**: A new training dataset released [here](https://pan.baidu.com/s/1S6LJZGdqcZRle1vlcMzHOQ) which can easily achieve much better accuracy. See [discussion](https://github.com/deepinsight/insightface/issues/215) for detail.
+
+**`2018.04.23`**: Our implementation of [MobileFaceNet](https://arxiv.org/abs/1804.07573) is now available. Please set `--network y1` to use this lightweight but powerful backbone.
+
 **`2018.03.26`**: We can train with combined margin(loss-type=5), see [Verification Results On Combined Margin](#verification-results-on-combined-margin).
 
 **`2018.02.13`**: We achieved state-of-the-art performance on [MegaFace-Challenge](http://megaface.cs.washington.edu/results/facescrub.html). Please check our paper and code for implementation details.
@@ -129,6 +135,7 @@ CUDA_VISIBLE_DEVICES='0,1,2,3' python -u train_softmax.py --network m1 --loss-ty
 ```Shell
 CUDA_VISIBLE_DEVICES='0,1,2,3,4,5,6,7' python -u train_softmax.py --network p107 --loss-type 0 --per-batch-size 64 --data-dir ../datasets/faces_vgg_112x112 --prefix ../model-p107-softmax
 ```
+
 5. Verification results.
 
 *LResNet100E-IR* network trained on *MS1M* dataset with ArcFace loss:

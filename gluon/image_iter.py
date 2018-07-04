@@ -17,7 +17,8 @@ import mxnet as mx
 from mxnet import ndarray as nd
 from mxnet import io
 from mxnet import recordio
-sys.path.append(os.path.join(os.path.dirname(__file__), 'common'))
+#sys.path.append(os.path.join(os.path.dirname(__file__), 'common'))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src', 'common'))
 import face_preprocess
 import multiprocessing
 
@@ -40,7 +41,22 @@ class FaceImageIter(io.DataIter):
             self.imgrec = recordio.MXIndexedRecordIO(path_imgidx, path_imgrec, 'r')  # pylint: disable=redefined-variable-type
             s = self.imgrec.read_idx(0)
             header, _ = recordio.unpack(s)
-            self.imgidx = list(self.imgrec.keys)
+            if header.flag>0:
+              print('header0 label', header.label)
+              self.header0 = (int(header.label[0]), int(header.label[1]))
+              #assert(header.flag==1)
+              self.imgidx = range(1, int(header.label[0]))
+              self.id2range = {}
+              self.seq_identity = range(int(header.label[0]), int(header.label[1]))
+              for identity in self.seq_identity:
+                s = self.imgrec.read_idx(identity)
+                header, _ = recordio.unpack(s)
+                a,b = int(header.label[0]), int(header.label[1])
+                self.id2range[identity] = (a,b)
+                count = b-a
+              print('id2range', len(self.id2range))
+            else:
+              self.imgidx = list(self.imgrec.keys)
             if shuffle:
               self.seq = self.imgidx
               self.oseq = self.imgidx
@@ -63,7 +79,7 @@ class FaceImageIter(io.DataIter):
         self.rand_mirror = rand_mirror
         print('rand_mirror', rand_mirror)
         self.cutoff = cutoff
-        self.provide_label = [(label_name, (batch_size,102))]
+        self.provide_label = [(label_name, (batch_size,))]
         #print(self.provide_label[0][1])
         self.cur = 0
         self.nbatch = 0
@@ -95,6 +111,8 @@ class FaceImageIter(io.DataIter):
               s = self.imgrec.read_idx(idx)
               header, img = recordio.unpack(s)
               label = header.label
+              if not isinstance(label, numbers.Number):
+                label = label[0]
               return label, img, None, None
             else:
               label, fname, bbox, landmark = self.imglist[idx]
@@ -163,17 +181,15 @@ class FaceImageIter(io.DataIter):
         try:
             while i < batch_size:
                 label, s, bbox, landmark = self.next_sample()
-                #if label[1]>=0.0 or label[2]>=0.0:
-                #  print(label[0:10])
                 _data = self.imdecode(s)
                 if self.rand_mirror:
                   _rd = random.randint(0,1)
                   if _rd==1:
                     _data = mx.ndarray.flip(data=_data, axis=1)
                 if self.nd_mean is not None:
-                    _data = _data.astype('float32')
-                    _data -= self.nd_mean
-                    _data *= 0.0078125
+                  _data = _data.astype('float32')
+                  _data -= 127.5
+                  _data *= 0.0078125
                 if self.cutoff>0:
                   centerh = random.randint(0, _data.shape[0]-1)
                   centerw = random.randint(0, _data.shape[1]-1)

@@ -27,7 +27,7 @@ logger = logging.getLogger()
 class FaceImageIter(io.DataIter):
 
     def __init__(self, batch_size, data_shape,
-                 path_imgrec = None,
+                 path_imgrec = None, task = 'age',
                  shuffle=False, aug_list=None, mean = None,
                  rand_mirror = False, cutoff = 0,
                  data_name='data', label_name='softmax_label', **kwargs):
@@ -63,7 +63,10 @@ class FaceImageIter(io.DataIter):
         self.rand_mirror = rand_mirror
         print('rand_mirror', rand_mirror)
         self.cutoff = cutoff
-        self.provide_label = [(label_name, (batch_size,102))]
+        if task=='age':
+          self.provide_label = [(label_name, (batch_size,100))]
+        else:
+          self.provide_label = [(label_name, (batch_size,))]
         #print(self.provide_label[0][1])
         self.cur = 0
         self.nbatch = 0
@@ -170,10 +173,9 @@ class FaceImageIter(io.DataIter):
                   _rd = random.randint(0,1)
                   if _rd==1:
                     _data = mx.ndarray.flip(data=_data, axis=1)
-                if self.nd_mean is not None:
-                    _data = _data.astype('float32')
-                    _data -= self.nd_mean
-                    _data *= 0.0078125
+                #_data = _data.astype('float32')
+                #_data -= 127.5
+                #_data *= 0.0078125
                 if self.cutoff>0:
                   centerh = random.randint(0, _data.shape[0]-1)
                   centerw = random.randint(0, _data.shape[1]-1)
